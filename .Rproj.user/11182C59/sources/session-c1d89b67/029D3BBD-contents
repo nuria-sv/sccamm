@@ -1,0 +1,45 @@
+# lcca implementation
+
+library(lcca)
+library(impute)
+# preparing data ----------------------------------------------------------
+
+# load data
+load("D:/long_cca/HMP/data.RData")
+
+# clean data
+gut_df = gut_df[which(!is.na(rna_df$RNAseq_A1BG)), ]
+gut_df = gut_df[!(is.na(gut_df$d2_SubjectID) | is.na(gut_df$gut_phylum_Actinobacteria)),]
+valid  = data.frame(table(gut_df$d2_SubjectID))
+valid  = valid[valid$Freq>1, ]
+gut_df = gut_df[gut_df$d2_SubjectID %in% valid$Var1,]
+rna_df = rna_df[rna_df$VisitID %in% gut_df$VisitID,]
+trn_df = trn_df[trn_df$VisitID %in% gut_df$VisitID,]
+
+# environment variables
+N = nrow(gut_df)                                                                # number of observations
+
+# for x
+X       = t(gut_df[, c(7:ncol(gut_df))])                                       # data values
+I.x     = length(unique(gut_df$d2_SubjectID))                                   # number of patients
+time.x  = scale(as.numeric(gut_df$CollectionDate))                              # times of visitations
+visit.x = as.numeric(table(gut_df$d2_SubjectID))                                # number of visitations
+J.x     = sum(visit.x)                                                          # total number of visits across patients
+x = list(X=X, time=time.x, I=I.x, J=J.x,visit=visit.x)
+
+Y       = t(rna_df[, c(7:ncol(rna_df))])                                        # data values
+I.y     = length(unique(rna_df$d2_SubjectID))                                   # number of patients
+time.y  = scale(as.numeric(rna_df$CollectionDate))                              # times of visitations
+visit.y = as.numeric(table(rna_df$d2_SubjectID))                                # number of visitations
+J.y     = sum(visit.y)   
+y = list(X=Y, time=time.y, I=I.y, J=J.y,visit=visit.y)
+
+
+
+
+# results -----------------------------------------------------------------
+system.time(
+  (mod = lcca.linear(x=x,y=y))
+)
+
+

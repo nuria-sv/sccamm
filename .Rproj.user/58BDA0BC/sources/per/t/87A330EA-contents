@@ -1,0 +1,129 @@
+
+# library -----------------------------------------------------------------
+
+library(ggplot2)
+library(reshape2)
+library(toscca)
+library(RColorBrewer)
+library(hrbrthemes)
+
+# simulations -------------------------------------------------------------
+n = 1
+p = 5
+q = 2
+K = 1
+t = 10
+
+p.sel = sample(1:p, 2, replace = F)
+q.sel = sample(1:q, 1)
+w1 = c(-0.9, 0.3)
+w2 = 0.5
+
+# noise
+X1 = matrix(sapply(1:p, function(j) rnorm(n*t)), n*t, p)
+X2 = matrix(sapply(1:q, function(j) rnorm(n*t)), n*t, q)
+
+# latent variable
+z0  = 0                 # initial value
+tr  = 0.3               # trend
+b   = 0.0               # ar(1)
+eps = rnorm(t)          # error term
+mu  = sapply(1:n, function(i) runif(1, -1, 1))
+
+Z  = matrix(z0, t, n)
+for (s in 2:t) {
+  
+  Z[s, ] = tr*(s/t) + b*Z[s-1] + eps[t]
+  
+  for (i in 1:n) {
+    Z[s, i] = Z[s,1] + mu[i]
+    
+  }
+  
+  
+  X1[s, p.sel[1]] = w1[1]*Z[s,] + rnorm(1, 0, 0.01)
+  X1[s, p.sel[2]] = w1[2]*Z[s,] + rnorm(1, 0, 0.01)
+  X2[s, q.sel[1]] = w2[1]*Z[s,] + rnorm(1, 0, 0.01)
+}
+
+
+
+
+
+rownames(Z) = paste0("t", 1:t)
+colnames(Z) = paste0("i", 1:n)
+Z = data.frame(Z)
+Z$t =  1:t
+Z.melt = melt(Z, id.var = "t"); colnames(Z.melt) <- c("t", "i", "z")
+
+ggplot(Z.melt, aes(x=t,y=z,group=i,colour=i)) +
+  geom_line() +
+  ggtitle("Latent process") +
+  xlab("Time") +
+  ylab("z") + 
+  theme_ipsum()
+
+
+dpcca.mod = "model 
+{
+  # priors latent
+  v.inv ~ dgamma(0.001,0.001); # for precision
+  v <- 1/v.inv;                 # variance ar lantent err
+  b ~ dunif(-1,1);             # one time coeff
+  w ~ dnorm(0, 10);
+  
+  for(i in 1:n) {
+    mu[i] ~ dnorm(0, 0.01);
+    z0[i] ~ dnorm(0, 0.001); # initial state
+  }
+  
+  
+  
+  # likelihood latent
+  for(i in 1:n) {
+      Z[i,1] ~ dnorm(b*z0[i] + mu[i], v.inv);
+      
+  }
+  
+  for(s in 2:t) {
+    for(i in 1:n) {
+      Z[i,s] ~ dnorm(b*Z[i,s-1] + mu[i] + w*(s/t), v.inv);
+
+    }
+  }
+  
+  # priors observation
+  for(j in 1:p) {
+    w1[j] ~ dnorm(0, 10);
+    S1.inv[j] ~ dgamma(0.001, 0.001);
+    S1[j] <- 1/S1.inv[j];
+  }
+  
+  for(j in 1:q) {
+    w2[j] ~ dnorm(0, 10);
+    S2.inv[j] ~ dgamma(0.001, 0.001);
+    S2[j] <- 1/S2.inv[j];
+  }
+  
+  
+  for(s in 1:t) {
+    for(j in 1:p) {
+      X1[j,s] ~ dnorm(Z[1,s]*w1[j], S1[j]);
+    }
+    for(j in 1:q) {
+      X2[j,s] ~ dnorm(Z[1,s]*w2[j], S2[j]);
+    }
+  }
+  
+    
+}"
+  
+  
+X1 = scale(X1)
+X2 = scale(X2)
+  
+data = list(X1 = t(X1), X2 = t(X2), t = t, n = 1, p = p, q = q)
+  
+# results ----------------------------------------------------------------------
+mod = run.jags(data = data, model=dpcca.mod, monitor=c("w", "b", "w1", "w2", "S1", "S2"), n.chains=3, 
+                 method="rjags", burnin = 100, sample = 1000, adapt = 100)

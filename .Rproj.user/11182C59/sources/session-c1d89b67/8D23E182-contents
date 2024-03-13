@@ -1,0 +1,251 @@
+library(runjags)
+
+library(coda)
+
+library(mvtnorm)
+
+testjags()
+
+dev.off()
+
+
+
+n=20
+
+p=200
+
+q=200
+
+
+
+S = diag(2)
+
+S[S==0] = 0.5
+
+ranefs = rmvnorm(n, sigma=S)
+
+Z = id = times = c()
+
+for(i in 1:n)
+  
+{
+  
+  t = runif(5,0,1)
+  
+  z = as.numeric(cbind(1, t) %*% ranefs[i,] + rnorm(length(t),0 , 1))
+  
+  Z = c(Z, z)
+  
+  id = c(id, rep(i, length(t)))
+  
+  times = c(times, t)
+  
+}
+
+
+
+alpha = rep(0, p)
+
+beta = rep(0, q)
+
+
+
+alpha[1:5] = (1:5) *0.5
+
+beta[1:3] = (1:3)  /3
+
+X = sapply(alpha, function(a) rnorm(n, Z*a, 1))
+
+Y = sapply(beta,  function(b) rnorm(n, Z*b, 1))
+
+
+
+image(cor(X,Y))
+
+
+
+# Model in the JAGS format
+
+model <- "model
+
+{
+
+  #########################################
+
+  #Model
+
+  for(i in 1:N)
+
+  {
+
+    Z[i] ~ dnorm(mu[i], sigmaZ);
+
+              mu[i] <- ranefs[id[i],1] + times[i] * ranefs[id[i],2];
+
+             
+
+              for(j in 1:P)
+
+    {
+
+      X[i,j] ~ dnorm(Z[i]*alpha[j], sigmaX);
+
+    }
+
+    for(j in 1:Q)
+
+    {
+
+      Y[i,j] ~ dnorm(Z[i]*beta[j], sigmaY);
+
+    }
+
+  }
+
+ 
+
+  for(p in 1:n)
+
+  {
+
+    ranefs[p,1:K] ~ dmnorm(theta,omega[,]);
+
+  }
+
+ 
+
+  #########################################
+
+  #Priors
+
+  for(j in 1:P)
+
+  {
+
+   alpha[j]  ~ ddexp(0, lambdaX); 
+
+  }
+
+ 
+
+  for(j in 1:Q)
+
+  {
+
+    beta[j] ~ddexp(0, lambdaY); 
+
+ 
+
+  }
+
+ 
+
+  lambdaX ~ dt(0, 1, 1)T(0,);
+
+  lambdaY ~ dt(0, 1, 1)T(0,);
+
+ 
+
+  sigmaY ~ dexp(1);
+
+  sigmaX ~ dexp(1);
+
+  sigmaZ ~ dexp(1);
+
+ 
+
+  omega[1:K,1:K] ~ dwish(R[,],K);
+
+  gamma <- inverse(omega);
+
+  #########################################
+
+ 
+
+}"
+  
+  
+  
+  N = nrow(X)
+  
+  P = ncol(X)
+  
+  Q = ncol(Y)  
+  
+  data = list(X=X, Y=Y, n=n,  N=N, P=P, Q=Q, id=id, times=times, R=diag(2)*0.1, K=2, theta=c(0,0))
+  
+  
+  
+  initlist = replicate(2,
+                       
+                       list(alpha=rnorm(p),
+                            
+                            beta=rnorm(q),
+                            
+                            sigmaX=runif(1,0.001,10),
+                            
+                            sigmaY=runif(1,0.001,10),
+                            
+                            sigmaZ=runif(1,0.001,10),
+                            
+                            lambdaX=runif(1,0.001,10),
+                            
+                            lambdaY=runif(1,0.001,10)), simplify=FALSE)
+  
+  
+  
+  results = run.jags(model=model, monitor=c("alpha", "beta", "sigmaX", "sigmaY", "sigmaZ","gamma","mu"),#
+                     
+                     #, "lambdaX", "lambdaY"),
+                     
+                     data=data, n.chains=2, method="rjags", inits=initlist,
+                     
+                     burnin = 1000,
+                     
+                     sample = 1000,
+                     
+                     adapt = 0)
+  
+  
+  
+  aa = do.call("rbind", results$mcmc)
+  
+  
+  
+  par(mfrow=c(1,2))
+  
+  plot(apply(aa, 2, median)[1:p])
+  
+  plot(apply(aa, 2, median)[(p+1):(p+q)])
+  
+  apply(aa, 2, median)[-(1:(p+q))]
+  
+  
+  
+  hist(apply(aa, 2, median)[-(1:(p+q+7))])
+  
+  
+  
+  
+  
+  variance = matrix(apply(aa, 2, median)[-(1:(p+q+3))][1:4], ncol=2)
+  
+  S
+  
+  variance
+  
+  #summary(results)
+  
+  
+  
+  #par(mfrow=c(4,4), ask=TRUE)
+  
+  #for(i in 1:200)
+  
+  #{
+  
+  # plot(as.matrix(results$mcmc[[1]][,-(1:(p+q))][,i]), type="l",xlab="",ylab="")
+  
+  # lines(as.matrix(results$mcmc[[2]][,-(1:(p+q))] [,i]), col=2)
+  
+  #}
