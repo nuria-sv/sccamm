@@ -13,6 +13,7 @@ scalar1 <- function(x) {x / sqrt(sum(x^2))}
 #rm(input2)
 
 # re-organize d2$X and d2$Y in long-format and throw away some rows to simulate a situation of n patients measured varying numbers of times
+load("D:/long_cca/Simulations Koos/nuria1.Rdata")
 dim(d2$X)
 dim(d2$Y)
 T = dim(d2$X)[1]
@@ -140,7 +141,8 @@ plotsofselectedvariables(YY2, set="Y", variables=1:10, res4a, lmeformule=" ~ pol
 
 # TOSCCA
 source("C:/Users/PC/OneDrive/github/sccamm/scripts/toscca_me.R")
-res_toscca = toscca.core(alphaInit = runif(ncol(XX2)-2), XX2, YY2, 50, 50, lmeformula = " ~ -1 + poly(time,3) + (1|id)")
+# res_toscca = toscca.core(alphaInit = runif(ncol(XX2)-2), XX2, YY2, 50, 50, lmeformula = " ~ 0 + poly(time,3) + (1|id)")
+res_toscca = toscca.core(alphaInit = runif(ncol(XX2)-2), XX2, YY2, 50, 50, model = "arima", arformula = NULL) # c(1,1,0)
 c(res_toscca$conv, res_toscca$iter)
 makeplots(XX2, YY2, res_toscca, lmeformule=" ~ poly(time,3) + (1+time|id)", weigths=TRUE, loadings=TRUE, change=TRUE); dev.new()
 plotsofpatientsof1variable(XX2, set="X", number=1, res_toscca, k=16, lmeformule=" ~ poly(time,3) + (1|id)"); dev.new()
