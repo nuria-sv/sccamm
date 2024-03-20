@@ -91,60 +91,60 @@ c(dim(X), dim(XX), dim(Y), dim(YY))
 ## simulated data
 ##################
 
-# estimate random-effects of each x- and y-variable by separate LME's, eigenlijk alleen zinvol als dezelfde n pats in X en Y zitten
-date()
-RE_XX = do_separate_lmes(XX2, lmeformule=" ~ poly(time,1) + (1+time|id)")
-RE_YY = do_separate_lmes(YY2, lmeformule=" ~ poly(time,1) + (1+time|id)")
-date()    # circa two minutes
-
-# calculate cross-correlations of the estimated random-effects
-ff1=cor(RE_XX, RE_YY)
-
-# plot the histogram of the cross-correlations and also determine the histogram of ncol(RE_XX)*ncol(RE_YY) correlations drawn from a null-distribution
-ff1a=as.numeric(ff1)                                          # 2*2500 * 2*1300 = 13 million correlations, but 1573926 NAs. Only 20*10 = 100 correlations are truly unequal to zero
-ff2=hist(ff1a,plot=FALSE)
-ff3=rnorm(sum(!is.na(ff1a)),0,1/sqrt(nrow(RE_XX)-3))          # draw about 13M Fisher-transforms of correlations from the normal distribution with zero mean and variance 1/(n-3)
-ff3=(exp(2*ff3)-1) / (exp(2*ff3)+1)                           # calculate the inverse Fisher-transforms
-ff4=hist(ff3, plot=FALSE,breaks=ff2$breaks)                   # histogram of the randomly selected correlations
-kk=ncol(RE_XX)*ncol(RE_YY)
-alpha=0.05
-plot(0,0, type="n", xlim=c(min(ff2$breaks),max(ff2$breaks)), ylim=c(-max(ff2$density,ff4$density),max(ff2$density,ff4$density)), xlab="", ylab="density")#, yaxt="n")
-i=2
-for (i in 2:length(ff2$breaks)) {
-   polygon(x = c(ff2$breaks[(i-1)], ff2$breaks[(i-1)], ff2$breaks[i], ff2$breaks[i],ff2$breaks[(i-1)]), y=c(0,ff2$density[(i-1)],ff2$density[(i-1)],0,0), col="grey")
-   polygon(x = c(ff4$breaks[(i-1)], ff4$breaks[(i-1)], ff4$breaks[i], ff4$breaks[i],ff4$breaks[(i-1)]), y=c(0,-ff4$density[(i-1)],-ff4$density[(i-1)],0,0), col="pink")
-}
-abline(h=0, col=1)
-text(x=min(ff2$breaks),y=max(ff2$density,ff4$density),"histogram of observed cross-correlations", col=1, adj=0)
-text(x=min(ff2$breaks),y=-max(ff2$density,ff4$density),"histogram of cross-correlations under the null-hypothesis of no association", col="red", adj=0, cex=0.7)
-
-# some stats of the distribution of correlations (compared to stats of the null-distribution)
-round(c(mean(ff1a,na.rm=TRUE), sd(ff1a,na.rm=TRUE), quantile(ff1a, probs=c(0.025,0.25,0.5,0.75,0.0975),na.rm=TRUE)),6)
-round(c(mean(ff3), sd(ff3,na.rm=TRUE), quantile(ff3, probs=c(0.025,0.25,0.5,0.75,0.0975),na.rm=TRUE)),6)
-which(abs(as.numeric(ff1))>0.9)
-
-# do a standard penalized CCA with the criss-cross/NIPALS algorithm on RE_XX and RE_YY
-date()
-res0 = estimate0_ab(RE_XX, RE_YY, alpha=1, lambda=0.00001, eps = 0.001, maxiter=1000)
-date()   # about 2 minutes and 30 seconds
-c(res0$iter)
-makeplots0(RE_XX, RE_YY, res0, weigths=TRUE, loadings=TRUE)
-
-# do the criss-cross algorithm on the original X- and Y-matrices
-descriptives(XX2, YY2, plotit=FALSE, k=16)
-res4a = estimate4_ab(XX2, YY2, lmeformule=" ~ -1 + poly(time,3) + (1+time|id)", alpha=0.99, lambda=0.001, eps = 0.001, maxiter=1000)
-c(res4a$conv, res4a$iter)
-makeplots(XX2, YY2, res4a, lmeformule=" ~ poly(time,3) + (1+time|id)", weigths=TRUE, loadings=TRUE, change=TRUE);dev.new()
-plotsofpatientsof1variable(XX2, set="X", number=1, res4a, k=16, lmeformule=" ~ poly(time,3) + (1|id)"); dev.new()
-plotsofselectedvariables(XX2, set="X", variables=1:20, res4a, lmeformule=" ~ poly(time,3) + (1|id)"); dev.new()
-plotsofselectedvariables(YY2, set="Y", variables=1:10, res4a, lmeformule=" ~ poly(time,3) + (1|id)"); dev.new()
+# # estimate random-effects of each x- and y-variable by separate LME's, eigenlijk alleen zinvol als dezelfde n pats in X en Y zitten
+# date()
+# RE_XX = do_separate_lmes(XX2, lmeformule=" ~ poly(time,1) + (1+time|id)")
+# RE_YY = do_separate_lmes(YY2, lmeformule=" ~ poly(time,1) + (1+time|id)")
+# date()    # circa two minutes
+#
+# # calculate cross-correlations of the estimated random-effects
+# ff1=cor(RE_XX, RE_YY)
+#
+# # plot the histogram of the cross-correlations and also determine the histogram of ncol(RE_XX)*ncol(RE_YY) correlations drawn from a null-distribution
+# ff1a=as.numeric(ff1)                                          # 2*2500 * 2*1300 = 13 million correlations, but 1573926 NAs. Only 20*10 = 100 correlations are truly unequal to zero
+# ff2=hist(ff1a,plot=FALSE)
+# ff3=rnorm(sum(!is.na(ff1a)),0,1/sqrt(nrow(RE_XX)-3))          # draw about 13M Fisher-transforms of correlations from the normal distribution with zero mean and variance 1/(n-3)
+# ff3=(exp(2*ff3)-1) / (exp(2*ff3)+1)                           # calculate the inverse Fisher-transforms
+# ff4=hist(ff3, plot=FALSE,breaks=ff2$breaks)                   # histogram of the randomly selected correlations
+# kk=ncol(RE_XX)*ncol(RE_YY)
+# alpha=0.05
+# plot(0,0, type="n", xlim=c(min(ff2$breaks),max(ff2$breaks)), ylim=c(-max(ff2$density,ff4$density),max(ff2$density,ff4$density)), xlab="", ylab="density")#, yaxt="n")
+# i=2
+# for (i in 2:length(ff2$breaks)) {
+#    polygon(x = c(ff2$breaks[(i-1)], ff2$breaks[(i-1)], ff2$breaks[i], ff2$breaks[i],ff2$breaks[(i-1)]), y=c(0,ff2$density[(i-1)],ff2$density[(i-1)],0,0), col="grey")
+#    polygon(x = c(ff4$breaks[(i-1)], ff4$breaks[(i-1)], ff4$breaks[i], ff4$breaks[i],ff4$breaks[(i-1)]), y=c(0,-ff4$density[(i-1)],-ff4$density[(i-1)],0,0), col="pink")
+# }
+# abline(h=0, col=1)
+# text(x=min(ff2$breaks),y=max(ff2$density,ff4$density),"histogram of observed cross-correlations", col=1, adj=0)
+# text(x=min(ff2$breaks),y=-max(ff2$density,ff4$density),"histogram of cross-correlations under the null-hypothesis of no association", col="red", adj=0, cex=0.7)
+#
+# # some stats of the distribution of correlations (compared to stats of the null-distribution)
+# round(c(mean(ff1a,na.rm=TRUE), sd(ff1a,na.rm=TRUE), quantile(ff1a, probs=c(0.025,0.25,0.5,0.75,0.0975),na.rm=TRUE)),6)
+# round(c(mean(ff3), sd(ff3,na.rm=TRUE), quantile(ff3, probs=c(0.025,0.25,0.5,0.75,0.0975),na.rm=TRUE)),6)
+# which(abs(as.numeric(ff1))>0.9)
+#
+# # do a standard penalized CCA with the criss-cross/NIPALS algorithm on RE_XX and RE_YY
+# date()
+# res0 = estimate0_ab(RE_XX, RE_YY, alpha=1, lambda=0.00001, eps = 0.001, maxiter=1000)
+# date()   # about 2 minutes and 30 seconds
+# c(res0$iter)
+# makeplots0(RE_XX, RE_YY, res0, weigths=TRUE, loadings=TRUE)
+#
+# # do the criss-cross algorithm on the original X- and Y-matrices
+# descriptives(XX2, YY2, plotit=FALSE, k=16)
+# res4a = estimate4_ab(XX2, YY2, lmeformule=" ~ -1 + poly(time,3) + (1+time|id)", alpha=0.99, lambda=0.001, eps = 0.001, maxiter=1000)
+# c(res4a$conv, res4a$iter)
+# makeplots(XX2, YY2, res4a, lmeformule=" ~ poly(time,3) + (1+time|id)", weigths=TRUE, loadings=TRUE, change=TRUE);dev.new()
+# plotsofpatientsof1variable(XX2, set="X", number=1, res4a, k=16, lmeformule=" ~ poly(time,3) + (1|id)"); dev.new()
+# plotsofselectedvariables(XX2, set="X", variables=1:20, res4a, lmeformule=" ~ poly(time,3) + (1|id)"); dev.new()
+# plotsofselectedvariables(YY2, set="Y", variables=1:10, res4a, lmeformule=" ~ poly(time,3) + (1|id)"); dev.new()
 
 # TOSCCA
-source("C:/Users/PC/OneDrive/github/sccamm/scripts/toscca_me.R")
+source("C:/Users/PC/OneDrive/github/sccamm/scripts/toscca_me_ar.R")
 # res_toscca = toscca.core(alphaInit = runif(ncol(XX2)-2), XX2, YY2, 50, 50, lmeformula = " ~ 0 + poly(time,3) + (1|id)")
 res_toscca = toscca.core(alphaInit = runif(ncol(XX2)-2), XX2, YY2, 50, 50, model = "arima", arformula = NULL) # c(1,1,0)
 c(res_toscca$conv, res_toscca$iter)
-makeplots(XX2, YY2, res_toscca, lmeformule=" ~ poly(time,3) + (1+time|id)", weigths=TRUE, loadings=TRUE, change=TRUE); dev.new()
+makeplots(XX2, YY2, res_toscca, model = "arima", lmeformule=" ~ poly(time,3) + (1+time|id)", weigths=TRUE, loadings=TRUE, change=TRUE); dev.new()
 plotsofpatientsof1variable(XX2, set="X", number=1, res_toscca, k=16, lmeformule=" ~ poly(time,3) + (1|id)"); dev.new()
 plotsofselectedvariables(XX2, set="X", variables=1:20, res_toscca, lmeformule=" ~ poly(time,3) + (1|id)"); dev.new()
 plotsofselectedvariables(YY2, set="Y", variables=1:10, res_toscca, lmeformule=" ~ poly(time,3) + (1|id)")
@@ -169,9 +169,21 @@ Y.temp$id = as.numeric(Y.temp$id); Y.temp$time = as.numeric(Y.temp$time); Y.temp
 
 X.temp = na.omit(X.temp); Y.temp = na.omit(Y.temp)
 
+
 X = X.temp[X.temp$id %in% Y.temp$id,c("id", "time", colnames(X.temp)[1:(ncol(X.temp) - 2)])]; rm(X.temp)
 Y = Y.temp[Y.temp$id %in% X$id,c("id", "time", colnames(Y.temp)[1:(ncol(Y.temp) - 2)])]; rm(Y.temp)
 
+# remove only one obs
+tab_x = table(X$id)
+val_x = (tab_x) > 1
+val_id_x = c(as.numeric(rownames(tab_x))[val_x])
+X = X[X$id %in% val_rows_x,]
+
+tab_y = table(Y$id)
+val_y = (tab_y) > 1
+val_id_y = c(as.numeric(rownames(tab_y))[val_y])
+
+Y = Y[Y$id %in% val_id_y,]
 
 # calculate a few descriptive statistics and plots of k randomly selected X- and Y-variables with lme-estimated means
 descriptives(X, Y, plotit=FALSE, k=16)
@@ -194,10 +206,11 @@ plotsofpatientsof1variable(X, set="X", number=22, res4, k=16, lmeformule=" ~ pol
 plotsofselectedvariables(X, set="X", variables=which(abs(res4$a) > 0.09), res4, lmeformule=" ~ poly(time,3) + (1|id)"); dev.new()
 
 
-source("C:/Users/PC/OneDrive/github/ccalb/scripts/toscca_me.R")
-nonz_a = 9000
-nonz_b = 80
-res_toscca = toscca.core(alphaInit = runif(ncol(X)-2), X, Y, nonz_a, nonz_b, lmeformula = " ~ poly(time,3) + (1|id)")
+source("C:/Users/PC/OneDrive/github/sccamm/scripts/toscca_me_ar.R")
+nonz_a = 10
+nonz_b = 10
+# res_toscca = toscca.core(alphaInit = runif(ncol(X)-2), X, Y, nonz_a, nonz_b, lmeformula = " ~ poly(time,3) + (1|id)")
+res_toscca = toscca.core(alphaInit = runif(ncol(X)-2), X, Y, nonz_a, nonz_b, model = "arima", arformula = c(1,0,0)) # c(1,1,0)
 c(res_toscca$conv, res_toscca$iter)
 makeplots(X, Y, res_toscca, lmeformule=" ~ poly(time,3) + (1|id)", weigths=TRUE, loadings=TRUE, change=TRUE, scale = T, nonz = c(nonz_a, nonz_b)); dev.new()
 plotsofpatientsof1variable(X, set="X", number=1, res_toscca, k=16, lmeformule=" ~ poly(time,3) + (1|id)"); dev.new()
@@ -283,7 +296,7 @@ plotsofpatientsof1variable = function(Z, set="X", number, resx, k=16, lmeformule
 
 #########################################################################################################################################################################################################
 
-makeplots = function(X, Y, resx, lmeformule=NA, weigths=TRUE, loadings=FALSE, change=FALSE, scale = FALSE, nonz = "") {
+makeplots = function(X, Y, resx, lmeformule=NA, weigths=TRUE, loadings=FALSE, change=FALSE, scale = FALSE, nonz = "", model = c("arima", "lme")) {
 
    if (is.na(lmeformule)) {lmeformule=" ~ time + (1|id)"}
 
@@ -318,13 +331,29 @@ makeplots = function(X, Y, resx, lmeformule=NA, weigths=TRUE, loadings=FALSE, ch
       X=X[rangorde,]
       id = X[,"id"]
       time = X[,"time"]
-      ff1 = aggregate(theta, by=list(time), FUN=mean)
-      ff3 = lmer(as.formula(paste("theta", lmeformule)))
-      ff4 = predict(ff3, newdata=data.frame(time=sort(unique(time)), id=-1), re.form=NA, allow.new.levels=TRUE)
+      # ff1 = aggregate(theta, by=list(time), FUN=mean)
+      # ff3 = lmer(as.formula(paste("theta", lmeformule)))
+      # ff4 = predict(ff3, newdata=data.frame(time=sort(unique(time)), id=-1), re.form=NA, allow.new.levels=TRUE)
       par(mfrow=c(1,2))
       ff1 = aggregate(theta, by=list(time), FUN=mean)
-      ff3 = lmer(as.formula(paste("theta", lmeformule)), data = data.frame(X))
-      ff4 = predict(ff3, newdata=data.frame(time=sort(unique(time)), id=-1), re.form=NA, allow.new.levels=TRUE)
+      if(model == "arima") {
+        ff3 = list()
+        ff4 = matrix(NA, nrow(theta), 1)
+
+        for (n in unique(id)) {
+          ff3[[n]] = arima(theta[n == id], order = arimaorder(resx$me_x[[1]]), method = "ML")
+          ff4[which(id ==n)] = as.numeric(predict(ff3[[n]], n.ahead = length(time[which(id == n)]))$pred)
+
+        }
+        ff4 = aggregate(ff4, by = list(time), FUN = mean)$V1
+        if(scale == TRUE) ff4 = scalar1(ff4)
+
+      }
+      if(model == "lme") {
+        ff3 = lmer(as.formula(paste("theta", lmeformule)), data = data.frame(X))
+        ff4 = predict(ff3, newdata=data.frame(time=sort(unique(time)), id=-1), re.form=NA, allow.new.levels=TRUE)
+      }
+
       plot(ff1[,1], ff1[,2], type="b", xlab="time-point", ylab="mean of the latent variable of the X-variables", ylim=c(min(ff1[,2],ff4),max(ff1[,2],ff4)))
       lines(sort(unique(time)), ff4, col=2, lwd=2)
       rangorde = order(Y[,"time"], Y[,"id"])
@@ -332,8 +361,23 @@ makeplots = function(X, Y, resx, lmeformule=NA, weigths=TRUE, loadings=FALSE, ch
       id = Y[,"id"]
       time = Y[,"time"]
       ff2 = aggregate(xi, by=list(time), FUN=mean)
-      ff5 = lmer(as.formula(paste("xi", lmeformule)), data = data.frame(Y))
-      ff6 = predict(ff5, newdata=data.frame(time=sort(unique(time)), id=-1), re.form=NA, allow.new.levels=TRUE)
+      if(model == "arima") {
+        ff5 = list()
+        ff6 = matrix(NA, nrow(xi), 1)
+
+        for (n in unique(id)) {
+          ff5[[n]] = arima(xi[n == id], order = arimaorder(resx$me_y[[1]]), method = "ML")
+          ff6[which(id ==n)] = as.numeric(predict(ff5[[n]], n.ahead = length(time[which(id == n)]))$pred)
+        }
+        ff6 = aggregate(ff6, by = list(time), FUN = mean)$V1
+        if(scale == TRUE) ff6 = scalar1(ff6)
+
+      }
+      if(model == "lme") {
+        ff5 = lmer(as.formula(paste("xi", lmeformule)), data = data.frame(Y))
+        ff6 = predict(ff5, newdata=data.frame(time=sort(unique(time)), id=-1), re.form=NA, allow.new.levels=TRUE)
+      }
+
       plot(ff2[,1], ff2[,2], type="b", xlab="time-point", ylab="mean of the latent variable of the Y-variables", ylim=c(min(ff2[,2],ff6),max(ff2[,2],ff6)))
       lines(sort(unique(time)), ff6, col=3, lwd=2)
       title("estimated change of the mean of the latent variables with time", sub = paste0("sparsity levels (", nonz[1], ", ", nonz[2], ")"), outer=T, line=-1)
