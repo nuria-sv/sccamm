@@ -128,8 +128,8 @@ toscca.core = function(alphaInit, A, B, nonzero_a, nonzero_b, iter = 20, tol = 1
     }
 
     if(model == "lme") {
-      me = lmer(as.formula(paste("zeta", lmeformula)), data = data.frame(zeta = zeta, time = time_a, id = id_a), REML = TRUE)
-      pred_me = predict(me, newdata = data.frame(time = time_b, id = id_b), allow.new.levels = TRUE, re.form = NULL)
+      me = lmer(as.formula(paste("zeta", lmeformula)), data = data.frame(zeta = zeta, time = time_b, id = id_b), REML = TRUE)
+      pred_me = predict(me, newdata = data.frame(time = time_a, id = id_a), allow.new.levels = TRUE, re.form = NULL)
 
     }
     alpha = t(A) %*% pred_me

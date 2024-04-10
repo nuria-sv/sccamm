@@ -8,6 +8,7 @@
 ####################################################################################
 ####################################################################################
 scalar1 <- function(x) {x / sqrt(sum(x^2))}
+source("C:/Users/PC/OneDrive/github/sccamm/functions/scale_functions.R")
 # read the simulated data, here all X and Y are still available in all n for all time-points
 # load("/users/ahzwinderman/desktop/nuria/herhaalde metingen syntaxen/nuria1.Rdata")
 #rm(input2)
@@ -141,10 +142,13 @@ c(dim(X), dim(XX), dim(Y), dim(YY))
 
 # TOSCCA
 source("C:/Users/PC/OneDrive/github/sccamm/scripts/toscca_me_ar.R")
-# res_toscca = toscca.core(alphaInit = runif(ncol(XX2)-2), XX2, YY2, 50, 50, lmeformula = " ~ 0 + poly(time,3) + (1|id)")
-res_toscca = toscca.core(alphaInit = runif(ncol(XX2)-2), XX2, YY2, 50, 50, model = "arima", arformula = NULL) # c(1,1,0)
+XX2 = scale_rm(XX2, centre = F); YY2 = scale_rm(YY2, centre = F)
+nonz_a = 1000
+nonz_b = 50
+res_toscca = toscca.core(alphaInit = runif(ncol(XX2)-2), XX2, YY2, nonz_a, nonz_b, model = "lme", lmeformula = " ~ 0 + poly(time,3) + (1|id)")
+res_toscca = toscca.core(alphaInit = runif(ncol(XX2)-2), XX2, YY2,  nonz_a, nonz_b, model = "arima", arformula = NULL) # c(1,1,0)
 c(res_toscca$conv, res_toscca$iter)
-makeplots(XX2, YY2, res_toscca, model = "arima", lmeformule=" ~ poly(time,3) + (1+time|id)", weigths=TRUE, loadings=TRUE, change=TRUE); dev.new()
+makeplots(XX2, YY2, res_toscca, model = "lme", lmeformule=" ~ poly(time,3) + (1+time|id)", nonz = c(nonz_a, nonz_b), weigths=TRUE, loadings=TRUE, change=TRUE); dev.new()
 plotsofpatientsof1variable(XX2, set="X", number=1, res_toscca, k=16, lmeformule=" ~ poly(time,3) + (1|id)"); dev.new()
 plotsofselectedvariables(XX2, set="X", variables=1:20, res_toscca, lmeformule=" ~ poly(time,3) + (1|id)"); dev.new()
 plotsofselectedvariables(YY2, set="Y", variables=1:10, res_toscca, lmeformule=" ~ poly(time,3) + (1|id)")
@@ -207,8 +211,8 @@ plotsofselectedvariables(X, set="X", variables=which(abs(res4$a) > 0.09), res4, 
 
 
 source("C:/Users/PC/OneDrive/github/sccamm/scripts/toscca_me_ar.R")
-nonz_a = 10
-nonz_b = 10
+nonz_a = 100
+nonz_b = 80
 # res_toscca = toscca.core(alphaInit = runif(ncol(X)-2), X, Y, nonz_a, nonz_b, lmeformula = " ~ poly(time,3) + (1|id)")
 res_toscca = toscca.core(alphaInit = runif(ncol(X)-2), X, Y, nonz_a, nonz_b, model = "arima", arformula = c(1,0,0)) # c(1,1,0)
 c(res_toscca$conv, res_toscca$iter)
