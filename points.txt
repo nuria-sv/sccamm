@@ -1,0 +1,7 @@
+standardisation over observation t
+add EL (and maybe thresh each iteration)
+residuals!? <=> perm test
+
+groups of people how effective treatment is (drug sensitivity data)
+
+see of grousp in hmp 

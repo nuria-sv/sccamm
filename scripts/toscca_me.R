@@ -98,6 +98,7 @@ toscca.core = function(alphaInit, A, B, nonzero_a, nonzero_b, iter = 20, tol = 1
 #
 #   dist = sqrt(colSums(beta^2))
 #   beta = sweep(beta, 2, dist, "/")
-
-  return(list(a = alpha, b = beta, conv = e, iter = i))
+  me_x = lmer(as.formula(paste("gamma", lmeformula)), data = data.frame(gamma = gamma, time = time_a, id = id_a), REML = TRUE)
+  me_y = lmer(as.formula(paste("zeta", lmeformula)), data = data.frame(zeta = zeta, time = time_b, id = id_b), REML = TRUE)
+  return(list(a = alpha, b = beta, conv = e, iter = i, me_x = me_x, me_y = me_y))
 }
