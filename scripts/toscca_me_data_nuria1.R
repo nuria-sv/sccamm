@@ -62,15 +62,15 @@ table(YY$tijd)
 table(XX$id)
 table(YY$id)
 
+# ale(XX2)  # scale sets? How?
+# YY2=scale(YY2)
+
+colnames(XX)[1:2] <- c("id", "time")
+colnames(YY)[1:2] <- c("id", "time")
 ### data are ready; 2 data.frames; XX (800 x 2502) and YY (700 x 1302)
 XX2=XX
 YY2=YY
-# XX2=scale(XX2)  # scale sets? How?
-# YY2=scale(YY2)
-
-colnames(XX2)[1:2] <- c("id", "time")
-colnames(YY2)[1:2] <- c("id", "time")
-
+# XX2=sc
 #########################################################################################################################################################################################################
 
 
@@ -142,9 +142,9 @@ c(dim(X), dim(XX), dim(Y), dim(YY))
 
 # TOSCCA
 source("C:/Users/PC/OneDrive/github/sccamm/scripts/toscca_me_ar.R")
-XX2 = scale_rm(XX2, centre = F); YY2 = scale_rm(YY2, centre = F)
-nonz_a = 1000
-nonz_b = 50
+XX2 = scale_rm(XX, centre = T); YY2 = scale_rm(YY, centre = T)
+nonz_a = 100 # seq(100, 1000, 100)
+nonz_b = 100 # seq(100, 1000, 100)
 res_toscca = toscca.core(alphaInit = runif(ncol(XX2)-2), XX2, YY2, nonz_a, nonz_b, model = "lme", lmeformula = " ~ 0 + poly(time,3) + (1|id)")
 res_toscca = toscca.core(alphaInit = runif(ncol(XX2)-2), XX2, YY2,  nonz_a, nonz_b, model = "arima", arformula = NULL) # c(1,1,0)
 c(res_toscca$conv, res_toscca$iter)
@@ -174,8 +174,8 @@ Y.temp$id = as.numeric(Y.temp$id); Y.temp$time = as.numeric(Y.temp$time); Y.temp
 X.temp = na.omit(X.temp); Y.temp = na.omit(Y.temp)
 
 
-X = X.temp[X.temp$id %in% Y.temp$id,c("id", "time", colnames(X.temp)[1:(ncol(X.temp) - 2)])]; rm(X.temp)
-Y = Y.temp[Y.temp$id %in% X$id,c("id", "time", colnames(Y.temp)[1:(ncol(Y.temp) - 2)])]; rm(Y.temp)
+X0 = X.temp[X.temp$id %in% Y.temp$id,c("id", "time", colnames(X.temp)[1:(ncol(X.temp) - 2)])]; rm(X.temp)
+Y0 = Y.temp[Y.temp$id %in% X$id,c("id", "time", colnames(Y.temp)[1:(ncol(Y.temp) - 2)])]; rm(Y.temp)
 
 # remove only one obs
 tab_x = table(X$id)
@@ -213,14 +213,32 @@ plotsofselectedvariables(X, set="X", variables=which(abs(res4$a) > 0.09), res4, 
 source("C:/Users/PC/OneDrive/github/sccamm/scripts/toscca_me_ar.R")
 nonz_a = 100
 nonz_b = 80
+
+X = scale_rm(X0, centre = F); Y = scale_rm(Y0, centre = )
+res_toscca = toscca.core(alphaInit = runif(ncol(X)-2), X, Y, nonz_a, nonz_b, model = "lme", lmeformula = " ~ poly(time,3) + (1|id)")
 # res_toscca = toscca.core(alphaInit = runif(ncol(X)-2), X, Y, nonz_a, nonz_b, lmeformula = " ~ poly(time,3) + (1|id)")
 res_toscca = toscca.core(alphaInit = runif(ncol(X)-2), X, Y, nonz_a, nonz_b, model = "arima", arformula = c(1,0,0)) # c(1,1,0)
 c(res_toscca$conv, res_toscca$iter)
-makeplots(X, Y, res_toscca, lmeformule=" ~ poly(time,3) + (1|id)", weigths=TRUE, loadings=TRUE, change=TRUE, scale = T, nonz = c(nonz_a, nonz_b)); dev.new()
+makeplots(X, Y, res_toscca, lmeformule=" ~ poly(time,3) + (1|id)", weigths=TRUE, model = "lme", loadings=TRUE, change=TRUE, nonz = c(nonz_a, nonz_b)); dev.new()
 plotsofpatientsof1variable(X, set="X", number=1, res_toscca, k=16, lmeformule=" ~ poly(time,3) + (1|id)"); dev.new()
 plotsofselectedvariables(X, set="X", variables=1:20, res_toscca, lmeformule=" ~ poly(time,3) + (1|id)"); dev.new()
 plotsofselectedvariables(Y, set="Y", variables=1:10, res_toscca, lmeformule=" ~ poly(time,3) + (1|id)")
 
+
+for(i in 1:10) {
+  XX2 = scale_rm(X, origin = i, centre = T)
+  YY2 = scale_rm(Y, origin = i, centre = T)
+  nonz_a = 100
+  nonz_b = 80
+  res_toscca = toscca.core(alphaInit = runif(ncol(XX2)-2), XX2, YY2, nonz_a, nonz_b, model = "lme", lmeformula = " ~ poly(time,3) + (1|id)")
+  par(mfrow = c(1,6))
+  makeplots(XX2, YY2, res_toscca, model = "lme", lmeformule=" ~ poly(time,3) + (1+time|id)", nonz = c(nonz_a, nonz_b), weigths=TRUE, loadings=TRUE, change=TRUE)
+  title(paste0("Stand. at t = ", i, " with centering"), outer=T, line=-1, adj = 0.5)
+
+}
+plots.dir.path <- list.files(tempdir(), pattern="rs-graphics", full.names = TRUE);
+plots.png.paths <- list.files(plots.dir.path, pattern=".png", full.names = TRUE)
+file.copy(from=plots.png.paths, to="plots/st/hmp/cent")
 
 #########################################################################################################################################################################################################
 
@@ -306,13 +324,13 @@ makeplots = function(X, Y, resx, lmeformule=NA, weigths=TRUE, loadings=FALSE, ch
 
    library(lme4)
    if(weigths) {
-      dev.new()
-      par(mfrow=c(1,2))
+      # dev.new()
+      # par(mfrow=c(1,2))
       plot(1:length(resx$a), resx$a, xlab="variable number", ylab="weights of X-variables")
       abline(h=0)
       plot(1:length(resx$b), resx$b, xlab="variable number", ylab="weights of Y-variables")
       abline(h=0)
-      title("canonical weights", sub = paste0("sparsity levels (", nonz[1], ", ", nonz[2], ")"), outer=T, line=-1)
+      title("canonical weights", sub = paste0("sparsity levels (", nonz[1], ", ", nonz[2], ")"), outer=T, line=-3, adj = 0.15)
 
    }
 
@@ -320,17 +338,17 @@ makeplots = function(X, Y, resx, lmeformule=NA, weigths=TRUE, loadings=FALSE, ch
    xi = (as.matrix(Y[,-c(1,2)]) %*% resx$b); if(scale == TRUE) {xi = scalar1(xi)}
 
   if(loadings) {
-      dev.new()
-      par(mfrow=c(1,2))
+      # dev.new()
+      # par(mfrow=c(1,2))
       plot(1:length(resx$a) , cor(X[,-c(1,2)], as.numeric(theta)), xlab="variable number", ylab="loadings of X-variables on theta")
       abline(h=0)
       plot(1:length(resx$b) , cor(Y[,-c(1,2)], as.numeric(xi))   , xlab="variable number", ylab="loadings of Y-variables on xi")
       abline(h=0)
-      title("correlations", sub =paste0("sparsity levels (", nonz[1], ", ", nonz[2], ")"), outer=T, line=-1)
+      title("correlations", sub =paste0("sparsity levels (", nonz[1], ", ", nonz[2], ")"), outer=T, line=-3, adj = 0.5)
   }
 
    if(change) {
-      dev.new()
+      # dev.new()
       rangorde = order(X[,"time"], X[,"id"])
       X=X[rangorde,]
       id = X[,"id"]
@@ -338,7 +356,7 @@ makeplots = function(X, Y, resx, lmeformule=NA, weigths=TRUE, loadings=FALSE, ch
       # ff1 = aggregate(theta, by=list(time), FUN=mean)
       # ff3 = lmer(as.formula(paste("theta", lmeformule)))
       # ff4 = predict(ff3, newdata=data.frame(time=sort(unique(time)), id=-1), re.form=NA, allow.new.levels=TRUE)
-      par(mfrow=c(1,2))
+      # par(mfrow=c(1,2))
       ff1 = aggregate(theta, by=list(time), FUN=mean)
       if(model == "arima") {
         ff3 = list()
@@ -384,7 +402,7 @@ makeplots = function(X, Y, resx, lmeformule=NA, weigths=TRUE, loadings=FALSE, ch
 
       plot(ff2[,1], ff2[,2], type="b", xlab="time-point", ylab="mean of the latent variable of the Y-variables", ylim=c(min(ff2[,2],ff6),max(ff2[,2],ff6)))
       lines(sort(unique(time)), ff6, col=3, lwd=2)
-      title("estimated change of the mean of the latent variables with time", sub = paste0("sparsity levels (", nonz[1], ", ", nonz[2], ")"), outer=T, line=-1)
+      title("estimated change of the mean of the latent variables with time", sub = paste0("sparsity levels (", nonz[1], ", ", nonz[2], ")"), outer=T, line=-3, adj = 0.95)
    }
 }
 
